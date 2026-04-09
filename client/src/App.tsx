@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './App.css';
+import { Container, Typography, Box, TextField, Button, Card, CardContent, Grid, Snackbar, Alert, CircularProgress } from '@mui/material';
 
 const API_BASE = 'http://localhost:8000'; // Adjust if backend runs elsewhere
 
@@ -9,9 +10,11 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState({ restaurant_id: '', rating: '', comment: '', visit_date: '' });
   const [message, setMessage] = useState('');
+  const [openSnackbar, setOpenSnackbar] = useState(false);
 
   useEffect(() => {
     fetchRecommendations();
+    // eslint-disable-next-line
   }, [userId]);
 
   const fetchRecommendations = async () => {
@@ -23,6 +26,7 @@ function App() {
       setRecommendations(data.recommendations || []);
     } catch (e) {
       setMessage('Failed to fetch recommendations.');
+      setOpenSnackbar(true);
     }
     setLoading(false);
   };
@@ -48,56 +52,104 @@ function App() {
       });
       const data = await res.json();
       setMessage(data.message || 'Feedback submitted.');
+      setOpenSnackbar(true);
       setFeedback({ restaurant_id: '', rating: '', comment: '', visit_date: '' });
       fetchRecommendations();
     } catch (e) {
       setMessage('Failed to submit feedback.');
+      setOpenSnackbar(true);
     }
   };
 
   return (
-    <div className="App">
-      <h1>Restaurant Recommendations</h1>
-      <div>
-        <label>User ID: </label>
-        <input type="number" value={userId} onChange={e => setUserId(Number(e.target.value))} min={1} />
-      </div>
-      <button onClick={fetchRecommendations} disabled={loading} style={{ margin: '10px 0' }}>
-        {loading ? 'Loading...' : 'Refresh Recommendations'}
-      </button>
-      {message && <div style={{ color: 'green', margin: '10px 0' }}>{message}</div>}
-      <h2>Recommended Restaurants</h2>
-      <ul>
-        {recommendations.length === 0 && <li>No recommendations found.</li>}
-        {recommendations.map((r: any) => (
-          <li key={r.id}>
-            <b>{r.name}</b> ({r.cuisine || 'N/A'})<br />
-            Address: {r.address || 'N/A'}<br />
-            Avg Rating: {r.avg_rating?.toFixed(2)} | Visits: {r.visit_count}
-          </li>
-        ))}
-      </ul>
-      <h2>Submit Feedback</h2>
-      <form onSubmit={submitFeedback} style={{ display: 'flex', flexDirection: 'column', maxWidth: 400 }}>
-        <label>
-          Restaurant ID:
-          <input name="restaurant_id" value={feedback.restaurant_id} onChange={handleFeedbackChange} required type="number" min={1} />
-        </label>
-        <label>
-          Rating (1-5):
-          <input name="rating" value={feedback.rating} onChange={handleFeedbackChange} type="number" min={1} max={5} />
-        </label>
-        <label>
-          Comment:
-          <input name="comment" value={feedback.comment} onChange={handleFeedbackChange} />
-        </label>
-        <label>
-          Visit Date (YYYY-MM-DD):
-          <input name="visit_date" value={feedback.visit_date} onChange={handleFeedbackChange} type="date" />
-        </label>
-        <button type="submit" style={{ marginTop: 10 }}>Submit Feedback</button>
-      </form>
-    </div>
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      <Typography variant="h3" align="center" gutterBottom>
+        Restaurant Recommendations
+      </Typography>
+      <Box display="flex" alignItems="center" justifyContent="center" mb={3}>
+        <TextField
+          label="User ID"
+          type="number"
+          value={userId}
+          onChange={e => setUserId(Number(e.target.value))}
+          inputProps={{ min: 1 }}
+          sx={{ width: 120, mr: 2 }}
+        />
+        <Button variant="contained" onClick={fetchRecommendations} disabled={loading}>
+          {loading ? <CircularProgress size={24} /> : 'Refresh Recommendations'}
+        </Button>
+      </Box>
+      <Snackbar open={openSnackbar} autoHideDuration={4000} onClose={() => setOpenSnackbar(false)}>
+        <Alert onClose={() => setOpenSnackbar(false)} severity={message.includes('Failed') ? 'error' : 'success'} sx={{ width: '100%' }}>
+          {message}
+        </Alert>
+      </Snackbar>
+      <Typography variant="h5" gutterBottom>
+        Recommended Restaurants
+      </Typography>
+      {loading ? (
+        <Box display="flex" justifyContent="center" my={4}><CircularProgress /></Box>
+      ) : (
+        <Grid container spacing={2}>
+          {recommendations.length === 0 && (
+            <Grid item xs={12}><Typography>No recommendations found.</Typography></Grid>
+          )}
+          {recommendations.map((r: any) => (
+            <Grid item xs={12} sm={6} md={4} key={r.id}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">{r.name}</Typography>
+                  <Typography variant="body2" color="text.secondary">{r.cuisine || 'N/A'}</Typography>
+                  <Typography variant="body2">Address: {r.address || 'N/A'}</Typography>
+                  <Typography variant="body2">Avg Rating: {r.avg_rating?.toFixed(2)} | Visits: {r.visit_count}</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+      <Box mt={5}>
+        <Typography variant="h5" gutterBottom>Submit Feedback</Typography>
+        <Box component="form" onSubmit={submitFeedback} sx={{ display: 'flex', flexDirection: 'column', maxWidth: 400, mx: 'auto' }}>
+          <TextField
+            label="Restaurant ID"
+            name="restaurant_id"
+            value={feedback.restaurant_id}
+            onChange={handleFeedbackChange}
+            required
+            type="number"
+            inputProps={{ min: 1 }}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            label="Rating (1-5)"
+            name="rating"
+            value={feedback.rating}
+            onChange={handleFeedbackChange}
+            type="number"
+            inputProps={{ min: 1, max: 5 }}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            label="Comment"
+            name="comment"
+            value={feedback.comment}
+            onChange={handleFeedbackChange}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            label="Visit Date"
+            name="visit_date"
+            value={feedback.visit_date}
+            onChange={handleFeedbackChange}
+            type="date"
+            InputLabelProps={{ shrink: true }}
+            sx={{ mb: 2 }}
+          />
+          <Button type="submit" variant="contained">Submit Feedback</Button>
+        </Box>
+      </Box>
+    </Container>
   );
 }
 
